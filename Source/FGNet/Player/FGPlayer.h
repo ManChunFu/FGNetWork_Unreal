@@ -12,6 +12,25 @@ class UFGMovementComponent;
 class UStaticMeshComponent;
 class USphereComponent;
 
+USTRUCT()
+struct FGNetMovement
+{
+	GENERATED_BODY()
+
+	FGNetMovement() = default;
+
+	FGNetMovement(const FVector& Position, const FRotator& Direction, const float TimeStamp) : Location(Position), Rotation(Direction), Time(TimeStamp)
+	{}
+
+	UPROPERTY()
+	FVector Location = FVector::ZeroVector;
+
+	UPROPERTY()
+	FRotator Rotation = FRotator::ZeroRotator;
+
+	float Time = 0.0f;
+};
+
 UCLASS()
 class FGNET_API AFGPlayer : public APawn
 {
@@ -49,7 +68,6 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetPint() const;
 
-
 	UFUNCTION(Server, Unreliable)
 	void Server_SendLocationAndRotation(const FVector& LocationToSend, const FRotator& RotationToSend, float DeltaTime);
 
@@ -61,6 +79,8 @@ private:
 	void Handle_Turn(float Value);
 	void Handle_BrakePressed();
 	void Handle_BrakeReleased();
+
+	TQueue<FGNetMovement> MovementsQueue;
 
 	float Forward = 0.0f;
 	float Turn = 0.0f;

@@ -71,7 +71,29 @@ void AFGPlayer::Tick(float DeltaTime)
 
 		Server_SendLocationAndRotation(GetActorLocation(), GetActorRotation(), DeltaTime);
 	}
-	
+	else
+	{
+		float TimeDiff = 0;
+		while (!MovementsQueue.IsEmpty())
+		{
+			FGNetMovement NewNetMove;
+			MovementsQueue.Dequeue(NewNetMove);
+
+			TimeDiff = DeltaTime - NewNetMove.Time;
+			if (DeltaTime - NewNetMove.Time > TimeDiff)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Skipping"), DeltaTime);
+				continue;
+			}
+
+			UE_LOG(LogTemp, Warning, TEXT("%f"), TimeDiff);
+
+			SetActorLocation(FMath::Lerp(GetActorLocation(), NewNetMove.Location, DeltaTime * 2.0f));
+			SetActorRotation(FMath::RInterpTo(GetActorRotation(), NewNetMove.Rotation, DeltaTime * 2.0f, Yaw));
+
+			//SetActorLocationAndRotation(NewNetMove.Location, NewNetMove.Rotation);
+		}
+	}
 }
 
 // Called to bind functionality to input
@@ -106,8 +128,10 @@ void AFGPlayer::Multicast_SendLocationAndRotation_Implementation(const FVector& 
 {
 	if (!IsLocallyControlled())
 	{
-		SetActorLocation(FMath::VInterpTo(GetActorLocation(), LocationToSend, DeltaTime, MovementVelocity));
-		SetActorRotation(FMath::RInterpTo(GetActorRotation(), RotationToSend, DeltaTime, Yaw));
+		MovementsQueue.Enqueue({ LocationToSend, RotationToSend, DeltaTime});
+		//SetActorLocation(FMath::VInterpTo(GetActorLocation(), LocationToSend, DeltaTime, MovementVelocity));
+		//SetActorRotation(FMath::RInterpTo(GetActorRotation(), RotationToSend, DeltaTime, Yaw));
+		//SetActorLocationAndRotation(LocationToSend, RotationToSend);
 	}
 }
 
