@@ -11,6 +11,8 @@
 #include "GameFramework/PlayerState.h"
 #include "../Components/FGMovementComponent.h"
 #include "../FGMovementStatics.h"
+#include "Components/SceneComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 // Sets default values
 AFGPlayer::AFGPlayer()
@@ -39,16 +41,28 @@ AFGPlayer::AFGPlayer()
 void AFGPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	MovementComponent->SetUpdatedComponent(CollisionComponent);
+
+	CurrentMovement.Location = GetActorLocation();
+	CurrentMovement.Rotation = GetActorRotation();
+	MovementToUpdate.Location = CurrentMovement.Location;
+	MovementToUpdate.Rotation = CurrentMovement.Rotation;
 }
 
-// Called every frame
 void AFGPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsLocallyControlled())
+	FRotator StartRotation = GetActorRotation();
+	FVector StartLocation = GetActorLocation();
+
+	if (!IsLocallyControlled())
+	{
+		SetActorLocation(FMath::VInterpTo(StartLocation, MovementToUpdate.Location, MovementToUpdate.Time, SmoothTransitionSpeed));
+		SetActorRotation(FMath::RInterpTo(StartRotation, MovementToUpdate.Rotation, MovementToUpdate.Time, SmoothTransitionSpeed));
+	}
+	else
 	{
 		const float Friction = IsBraking() ? BrakingFriction : DefaultFriction;
 		const float Alpha = FMath::Clamp(FMath::Abs(MovementVelocity / (MaxVelocity * 0.75f)), 0.0f, 1.0f);
@@ -69,34 +83,15 @@ void AFGPlayer::Tick(float DeltaTime)
 		FrameMovement.AddDelta(GetActorForwardVector() * MovementVelocity * DeltaTime);
 		MovementComponent->Move(FrameMovement);
 
-		Server_SendLocationAndRotation(GetActorLocation(), GetActorRotation(), DeltaTime);
-	}
-	else
-	{
-		float TimeDiff = 0;
-		while (!MovementsQueue.IsEmpty())
+		if (CurrentMovement.Location != StartLocation || CurrentMovement.Rotation != StartRotation)
 		{
-			FGNetMovement NewNetMove;
-			MovementsQueue.Dequeue(NewNetMove);
-
-			TimeDiff = DeltaTime - NewNetMove.Time;
-			if (DeltaTime - NewNetMove.Time > TimeDiff)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Skipping"), DeltaTime);
-				continue;
-			}
-
-			UE_LOG(LogTemp, Warning, TEXT("%f"), TimeDiff);
-
-			SetActorLocation(FMath::Lerp(GetActorLocation(), NewNetMove.Location, DeltaTime * 2.0f));
-			SetActorRotation(FMath::RInterpTo(GetActorRotation(), NewNetMove.Rotation, DeltaTime * 2.0f, Yaw));
-
-			//SetActorLocationAndRotation(NewNetMove.Location, NewNetMove.Rotation);
+			CurrentMovement.Location = StartLocation;
+			CurrentMovement.Rotation = StartRotation;
+			Server_SendLocationAndRotation(StartLocation, StartRotation, DeltaTime);
 		}
 	}
 }
 
-// Called to bind functionality to input
 void AFGPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -108,7 +103,7 @@ void AFGPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction(TEXT("Brake"), IE_Released, this, &AFGPlayer::Handle_BrakeReleased);
 }
 
-int32 AFGPlayer::GetPint() const
+int32 AFGPlayer::GetPing() const
 {
 	if (GetPlayerState())
 	{
@@ -128,10 +123,9 @@ void AFGPlayer::Multicast_SendLocationAndRotation_Implementation(const FVector& 
 {
 	if (!IsLocallyControlled())
 	{
-		MovementsQueue.Enqueue({ LocationToSend, RotationToSend, DeltaTime});
-		//SetActorLocation(FMath::VInterpTo(GetActorLocation(), LocationToSend, DeltaTime, MovementVelocity));
-		//SetActorRotation(FMath::RInterpTo(GetActorRotation(), RotationToSend, DeltaTime, Yaw));
-		//SetActorLocationAndRotation(LocationToSend, RotationToSend);
+		MovementToUpdate.Location = LocationToSend;
+		MovementToUpdate.Rotation = RotationToSend;
+		MovementToUpdate.Time = DeltaTime;
 	}
 }
 
@@ -154,6 +148,7 @@ void AFGPlayer::Handle_BrakeReleased()
 {
 	bBrake = false;
 }
+
 
 
 

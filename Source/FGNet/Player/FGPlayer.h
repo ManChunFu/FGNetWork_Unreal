@@ -21,9 +21,8 @@ struct FGNetMovement
 
 	FGNetMovement(const FVector& Position, const FRotator& Direction, const float TimeStamp) : Location(Position), Rotation(Direction), Time(TimeStamp)
 	{}
-
 	UPROPERTY()
-	FVector Location = FVector::ZeroVector;
+	FVector_NetQuantize Location = FVector::ZeroVector;
 
 	UPROPERTY()
 	FRotator Rotation = FRotator::ZeroRotator;
@@ -66,7 +65,7 @@ public:
 	bool IsBraking() const { return bBrake; }
 
 	UFUNCTION(BlueprintPure)
-	int32 GetPint() const;
+	int32 GetPing() const;
 
 	UFUNCTION(Server, Unreliable)
 	void Server_SendLocationAndRotation(const FVector& LocationToSend, const FRotator& RotationToSend, float DeltaTime);
@@ -75,12 +74,14 @@ public:
 	void Multicast_SendLocationAndRotation(const FVector& LocationToSend, const FRotator& RotationToSend, float DeltaTime);
 
 private:
+	FGNetMovement MovementToUpdate;
+	FGNetMovement CurrentMovement;
+	const float SmoothTransitionSpeed = 2.5f;
+
 	void Handle_Accelerate(float Value);
 	void Handle_Turn(float Value);
 	void Handle_BrakePressed();
 	void Handle_BrakeReleased();
-
-	TQueue<FGNetMovement> MovementsQueue;
 
 	float Forward = 0.0f;
 	float Turn = 0.0f;
