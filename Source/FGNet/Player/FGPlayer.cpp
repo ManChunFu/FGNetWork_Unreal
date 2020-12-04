@@ -14,7 +14,6 @@
 #include "Components/SceneComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
-// Sets default values
 AFGPlayer::AFGPlayer()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -35,7 +34,6 @@ AFGPlayer::AFGPlayer()
 	MovementComponent = CreateDefaultSubobject<UFGMovementComponent>(TEXT("MovementComponent"));
 
 	SetReplicateMovement(false);
-
 }
 
 void AFGPlayer::BeginPlay()
