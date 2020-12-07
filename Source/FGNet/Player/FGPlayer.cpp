@@ -55,12 +55,7 @@ void AFGPlayer::Tick(float DeltaTime)
 	FRotator StartRotation = GetActorRotation();
 	FVector StartLocation = GetActorLocation();
 
-	if (!IsLocallyControlled())
-	{
-		SetActorLocation(FMath::VInterpTo(StartLocation, MovementToUpdate.Location, MovementToUpdate.Time, SmoothTransitionSpeed));
-		SetActorRotation(FMath::RInterpTo(StartRotation, MovementToUpdate.Rotation, MovementToUpdate.Time, SmoothTransitionSpeed));
-	}
-	else
+	if (IsLocallyControlled())
 	{
 		const float Friction = IsBraking() ? BrakingFriction : DefaultFriction;
 		const float Alpha = FMath::Clamp(FMath::Abs(MovementVelocity / (MaxVelocity * 0.75f)), 0.0f, 1.0f);
@@ -87,6 +82,11 @@ void AFGPlayer::Tick(float DeltaTime)
 			CurrentMovement.Rotation = StartRotation;
 			Server_SendLocationAndRotation(StartLocation, StartRotation, DeltaTime);
 		}
+	}
+	else
+	{
+		SetActorLocation(FMath::VInterpTo(StartLocation, MovementToUpdate.Location, MovementToUpdate.Time, SmoothTransitionSpeed));
+		SetActorRotation(FMath::RInterpTo(StartRotation, MovementToUpdate.Rotation, MovementToUpdate.Time, SmoothTransitionSpeed));
 	}
 }
 
