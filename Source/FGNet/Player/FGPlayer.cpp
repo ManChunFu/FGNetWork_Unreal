@@ -55,11 +55,6 @@ void AFGPlayer::BeginPlay()
 
 	MovementComponent->SetUpdatedComponent(CollisionComponent);
 
-	//CurrentMovement.Location = GetActorLocation();
-	//CurrentMovement.Rotation = GetActorRotation();
-	//MovementToUpdate.Location = CurrentMovement.Location;
-	//MovementToUpdate.Rotation = CurrentMovement.Rotation;
-
 	CreateDebugWidget();
 	if (DebugMenuInstance != nullptr)
 	{
@@ -81,9 +76,6 @@ void AFGPlayer::Tick(float DeltaTime)
 	if (!ensure(PlayerSettings != nullptr))
 		return;
 	FFGFrameMovement FrameMovement = MovementComponent->CreateFrameMovement();
-
-	//FRotator StartRotation = GetActorRotation();
-	//FVector StartLocation = GetActorLocation();
 
 	if (IsLocallyControlled())
 	{
@@ -108,11 +100,12 @@ void AFGPlayer::Tick(float DeltaTime)
 
 		// Compress the data before sending to the Server
 		MovementToUpdate.NetLocation = GetActorLocation();
-		MovementToUpdate.NetForward = Forward + 1;
+		MovementToUpdate.NetForward = Forward;
 		MovementToUpdate.NetYaw = FMath::RoundToInt(GetActorRotation().Yaw * 256.0f / 360.0f) & 0xFF;// uint8
 		MovementToUpdate.NetTime = ClientTimeStamp;
 
 		Server_SendMovement(MovementToUpdate);
+
 		/* week 1 - movment assignment
 		Server_SendLocationAndRotation(StartLocation, StartRotation, DeltaTime);*/
 		/* week2 replicate data example
@@ -181,17 +174,17 @@ void AFGPlayer::Multicast_SendMovement_Implementation(const FGNetMovement& Movem
 {
 	if (!IsLocallyControlled())
 	{
-		Forward = MovementData.NetForward - 1; //Decompress
+		Forward = MovementData.NetForward;
 		const float DeltaTime = FMath::Min(MovementData.NetTime - ClientTimeStamp, MaxMoveDeltaTime);
 		ClientTimeStamp = MovementData.NetTime;
 		AddMovementVelocity(DeltaTime);
-		//Decompress
+		////Decompress
 		FRotator DecompressdRotation = FRotator(0.0f, (float)MovementData.NetYaw * 360.0f / 256.0f, 0.0f);
 		MovementComponent->SetFacingRotation(DecompressdRotation);
 
-		//const FVector DeltaDiff = MovementData.Location - GetActorLocation();
-		//if (DeltaDiff.SizeSquared() > FMath::Square(1.0f))
-		//{
+		const FVector DeltaDiff = MovementData.NetLocation - GetActorLocation();
+		if (DeltaDiff.SizeSquared() > FMath::Square(40.0f))
+		{
 			if (bPerformNetWorkSmoothing)
 			{
 				const FScopedPreventAttachedComponentMove PreventMeshMove(MeshComponent);
@@ -202,7 +195,7 @@ void AFGPlayer::Multicast_SendMovement_Implementation(const FGNetMovement& Movem
 			{
 				SetActorLocation(MovementData.NetLocation);
 			}
-		//}
+		}
 	}
 }
 

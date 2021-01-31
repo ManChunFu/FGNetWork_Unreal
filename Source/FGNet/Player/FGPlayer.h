@@ -20,16 +20,16 @@ class UMaterialInterface;
 USTRUCT()
 struct FGNetMovement
 {
-	GENERATED_BODY()
+	GENERATED_USTRUCT_BODY()
 
 public:
 	FGNetMovement() = default;
 
 	UPROPERTY()
-	FVector_NetQuantize100 NetLocation;
+	FVector_NetQuantize NetLocation;
 
 	UPROPERTY()
-	uint8 NetForward;
+	float NetForward;
 
 	UPROPERTY()
 	uint8 NetYaw;
@@ -74,6 +74,10 @@ public:
 	void Multicast_SendLocationAndRotation(const FVector& LocationToSend, const FRotator& RotationToSend, float DeltaTime);
 
 #pragma region Week3 - Improve Movement / Prediction
+	float ClientTimeBetweenUpdates;
+	float LerpRatio;
+	bool bNeedUpdate;
+
 	UFUNCTION(Server, Unreliable)
 	void Server_SendMovement(const FGNetMovement& MovementData);
 
