@@ -71,6 +71,7 @@ void AFGPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	ClientTimeBetweenUpdates += DeltaTime;
 	FireCooldownElapsed -= DeltaTime;
 
 	if (!ensure(PlayerSettings != nullptr))
@@ -118,9 +119,10 @@ void AFGPlayer::Tick(float DeltaTime)
 		FrameMovement.AddDelta(GetActorForwardVector() * MovementVelocity * DeltaTime);
 		MovementComponent->Move(FrameMovement);
 
+		LerpRatio = ClientTimeStamp / ClientTimeBetweenUpdates;
 		if (bPerformNetWorkSmoothing)
 		{
-			const FVector NewRelativeLocation = FMath::VInterpTo(MeshComponent->GetRelativeLocation(), OriginalMeshOffset, LastCorrectionDelta, 1.75f);
+			const FVector NewRelativeLocation = FMath::VInterpTo(MeshComponent->GetRelativeLocation(), OriginalMeshOffset, LastCorrectionDelta, LerpRatio);
 			MeshComponent->SetRelativeLocation(NewRelativeLocation, false, nullptr, ETeleportType::TeleportPhysics);
 		}
 
