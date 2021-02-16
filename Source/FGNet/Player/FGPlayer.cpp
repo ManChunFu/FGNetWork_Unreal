@@ -274,14 +274,14 @@ void AFGPlayer::OnPickup(AFGPickup* Pickup)
 void AFGPlayer::Client_OnPickupRockets_Implementation(int32 PickedUpRockets, AFGPickup* Pickup)
 {
 	Pickup->ObjectHasBeenPickedUp();
-	NumRockets += PickedUpRockets;
+	NumRockets = PickedUpRockets;
 	BP_OnNumRocketsChanged(NumRockets);
 }
 
 void AFGPlayer::Server_OnPickup_Implementation(AFGPickup* Pickup)
 {
 	ServerNumRockets += Pickup->NumRockets;
-	Client_OnPickupRockets(Pickup->NumRockets, Pickup);
+	Client_OnPickupRockets(ServerNumRockets, Pickup);
 }
 
 int32 AFGPlayer::GetNumActiveRockets() const
@@ -345,11 +345,11 @@ void AFGPlayer::Server_FireRocket_Implementation(AFGRocket* NewRocket, const FVe
 		const float DeltaYaw = FMath::FindDeltaAngleDegrees(RocketFacingRotation.Yaw, GetActorForwardVector().Rotation().Yaw) * 0.5f; // 0.5f is small offset
 		const FRotator NewFacingRotation = RocketFacingRotation + FRotator(0.0f, DeltaYaw, 0.0f);
 		ServerNumRockets--;
-		Multicast_FireRocket(NewRocket, RocketStartLocation, NewFacingRotation);
+		Multicast_FireRocket(NewRocket, RocketStartLocation, NewFacingRotation, ServerNumRockets);
 	}
 }
 
-void AFGPlayer::Multicast_FireRocket_Implementation(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation)
+void AFGPlayer::Multicast_FireRocket_Implementation(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation, int32 rocketLeft)
 {
 	if (!ensure(NewRocket != nullptr))
 		return;
@@ -360,10 +360,11 @@ void AFGPlayer::Multicast_FireRocket_Implementation(AFGRocket* NewRocket, const 
 	}
 	else
 	{
-		NumRockets--;
 		NewRocket->StartMoving(RocketFacingRotation.Vector(), RocketStartLocation);
 	}
+	NumRockets = rocketLeft;
 	BP_OnNumRocketsChanged(NumRockets);
+	
 }
 
 void AFGPlayer::Client_RemoveRocket_Implementation(AFGRocket* RocketToRemove)

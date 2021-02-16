@@ -159,7 +159,7 @@ private:
 	void Server_FireRocket(AFGRocket* Newrocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_FireRocket(AFGRocket* Newrocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation);
+	void Multicast_FireRocket(AFGRocket* Newrocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation, int32 rocketFired);
 
 	UFUNCTION(Client, Reliable)
 	void Client_RemoveRocket(AFGRocket* RocketToRemove);
